@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="fi">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Kaninkapina</title>
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <main class="shell">
+      <section class="game-panel" aria-label="Kaninkapina tasohyppelypeli">
+        <div class="start-menu" id="startMenu" aria-label="Alkuvalikko">
+          <div class="menu-scene" aria-hidden="true">
+            <div class="pixel-sun"></div>
+            <div class="pixel-cloud cloud-one"></div>
+            <div class="pixel-cloud cloud-two"></div>
+            <div class="menu-rabbit menu-rabbit-classic">
+              <span class="ear left"></span>
+              <span class="ear right"></span>
+              <span class="head"></span>
+              <span class="body"></span>
+            </div>
+            <div class="menu-rabbit menu-rabbit-dark">
+              <span class="ear left"></span>
+              <span class="ear right"></span>
+              <span class="head"></span>
+              <span class="body"></span>
+            </div>
+            <div class="giant-carrot"></div>
+            <div class="pixel-ground"></div>
+          </div>
+          <div class="menu-content">
+            <p class="menu-kicker">8-bittinen eläinseikkailu</p>
+            <h1>Kaninkapina</h1>
+            <p class="menu-copy">Porkkanat katoavat, lokit juonivat ja vain valitsemasi kani voi palauttaa vihannesrauhan.</p>
+            <p class="menu-progress" id="menuProgress">Avattu taso 1</p>
+            <p class="menu-controls">Liiku A/D tai nuolet · Hyppää Space/W · Ammu F/Ctrl · Tauko P/Esc · Äänet M · Uusi peli R</p>
+            <div class="menu-actions">
+              <button id="menuStartBtn" type="button">Aloita peli</button>
+              <button id="menuTestBtn" type="button">Testaa valittua tasoa</button>
+            </div>
+          </div>
+        </div>
+        <div class="hud" aria-live="polite">
+          <div class="level-title">
+            <span>Taso</span>
+            <strong id="levelName">Porkkananiitty</strong>
+          </div>
+          <div>
+            <span>Pisteet</span>
+            <strong id="score">0</strong>
+          </div>
+          <div>
+            <span>Porkkanat</span>
+            <strong id="carrots">0/9</strong>
+          </div>
+          <div>
+            <span>Elämät</span>
+            <strong id="lives">3</strong>
+          </div>
+          <div>
+            <span>Ennätys</span>
+            <strong id="bestScore">0</strong>
+          </div>
+        </div>
+        <canvas id="game" width="960" height="540" aria-label="Pelialue"></canvas>
+        <div class="level-progress" aria-label="Tason eteneminen">
+          <span id="levelProgressFill"></span>
+        </div>
+        <div class="controls">
+          <button id="leftBtn" type="button" aria-label="Liiku vasemmalle">◀</button>
+          <button id="jumpBtn" type="button" aria-label="Hyppää">▲</button>
+          <button id="rightBtn" type="button" aria-label="Liiku oikealle">▶</button>
+          <button id="shootBtn" type="button" aria-label="Ammu">●</button>
+          <button id="restartBtn" type="button">Uusi peli</button>
+          <button id="soundBtn" type="button">Ääni on</button>
+        </div>
+        <div class="character-select" aria-label="Valitse kanihahmo">
+          <span>Valitse kani</span>
+          <button class="character-option is-selected" id="classicRabbitBtn" type="button" data-rabbit="classic">
+            <span class="rabbit-swatch rabbit-classic" aria-hidden="true"></span>
+            Niitty-Niilo
+          </button>
+          <button class="character-option" id="darkRabbitBtn" type="button" data-rabbit="dark">
+            <span class="rabbit-swatch rabbit-dark" aria-hidden="true"></span>
+            Salmiakki-Sulo
+          </button>
+        </div>
+        <div class="test-tools" aria-label="Pelitestauksen tasovalitsin">
+          <label for="levelSelect">Testaa tasoa</label>
+          <select id="levelSelect"></select>
+          <button id="startLevelBtn" type="button">Aloita tasosta</button>
+          <button id="unlockLevelsBtn" type="button">Avaa tasot</button>
+        </div>
+        <div class="editor-tools" aria-label="Kenttäeditori">
+          <label for="editorType">Editor</label>
+          <select id="editorType">
+            <option value="platform">Alusta</option>
+            <option value="movingPlatform">Hissi</option>
+            <option value="routePlatform">Reittihissi</option>
+            <option value="crumblePlatform">Mureneva alusta</option>
+            <option value="oneWayPlatform">Yksisuuntainen alusta</option>
+            <option value="breakableWall">Hajoava seinä</option>
+            <option value="water">Vesi</option>
+            <option value="currentWater">Virtausvesi</option>
+            <option value="windZone">Tuulialue</option>
+            <option value="spikes">Piikit</option>
+            <option value="pendulum">Heilurivaara</option>
+            <option value="trampoline">Trampoliini</option>
+            <option value="key">Avain</option>
+            <option value="lockedGate">Lukittu portti</option>
+            <option value="pressureButton">Painonappi</option>
+            <option value="buttonGate">Nappiportti</option>
+            <option value="cameraHint">Kameravihje</option>
+            <option value="carrot">Porkkana</option>
+            <option value="bonusCarrot">Kultaporkkana</option>
+            <option value="hedgehog">Siili</option>
+            <option value="seagull">Lokki</option>
+            <option value="checkpoint">Checkpoint</option>
+          </select>
+          <input id="editorWidth" type="number" min="10" max="800" value="180" aria-label="Leveys">
+          <input id="editorHeight" type="number" min="10" max="200" value="24" aria-label="Korkeus">
+          <button id="editorToggleBtn" type="button">Editor pois</button>
+          <button id="editorUndoBtn" type="button">Peru viimeisin</button>
+          <button id="editorCopyBtn" type="button">Kopioi JSON</button>
+        </div>
+        <textarea id="editorOutput" rows="4" readonly aria-label="Kenttäeditorin JSON"></textarea>
+      </section>
+    </main>
+    <script type="module" src="src/main.js"></script>
+  </body>
+</html>
