@@ -15,6 +15,7 @@ const carrotsEl = document.getElementById("carrots");
 const livesEl = document.getElementById("lives");
 const bestScoreEl = document.getElementById("bestScore");
 const levelProgressFill = document.getElementById("levelProgressFill");
+const pauseBtn = document.getElementById("pauseBtn");
 const restartBtn = document.getElementById("restartBtn");
 const soundBtn = document.getElementById("soundBtn");
 const levelSelect = document.getElementById("levelSelect");
@@ -269,6 +270,7 @@ function resetGame() {
   gameOver = false;
   won = false;
   paused = false;
+  updatePauseButton();
   startLevel(0);
 }
 
@@ -280,6 +282,7 @@ function startTestLevel(index) {
   gameOver = false;
   won = false;
   paused = false;
+  updatePauseButton();
   startLevel(index);
   say(`Testataan tasoa ${index + 1}: ${level.name}`, 150);
 }
@@ -342,6 +345,35 @@ function openStartMenu() {
 function closeStartMenu() {
   menuOpen = false;
   startMenu.classList.add("is-hidden");
+}
+
+function releaseAllControls() {
+  keys.left = false;
+  keys.right = false;
+  keys.jump = false;
+  keys.shoot = false;
+  releaseJump();
+  document.querySelectorAll(".touch-control.is-pressed").forEach((button) => {
+    button.classList.remove("is-pressed");
+  });
+}
+
+function updatePauseButton() {
+  if (!pauseBtn) return;
+  pauseBtn.textContent = paused ? "Jatka" : "Tauko";
+  pauseBtn.classList.toggle("is-pressed", paused);
+}
+
+function setPaused(nextPaused) {
+  if (menuOpen) return;
+  paused = nextPaused;
+  if (paused) releaseAllControls();
+  updatePauseButton();
+  say(paused ? "Tauko" : "Jatketaan!", 70);
+}
+
+function togglePause() {
+  setPaused(!paused);
 }
 
 function selectRabbit(rabbit) {
@@ -2502,9 +2534,11 @@ function loop(tick) {
 
 function setButtonControl(buttonId, key) {
   const button = document.getElementById(buttonId);
+  if (!button) return;
   const press = (event) => {
     event.preventDefault();
     if (menuOpen || paused) return;
+    if (event.pointerId !== undefined) button.setPointerCapture(event.pointerId);
     startMusic();
     keys[key] = true;
     if (key === "jump") queueJump();
@@ -2514,6 +2548,9 @@ function setButtonControl(buttonId, key) {
     event.preventDefault();
     keys[key] = false;
     if (key === "jump") releaseJump();
+    if (event.pointerId !== undefined && button.hasPointerCapture(event.pointerId)) {
+      button.releasePointerCapture(event.pointerId);
+    }
     button.classList.remove("is-pressed");
   };
   button.addEventListener("pointerdown", press);
@@ -2549,8 +2586,7 @@ window.addEventListener("keydown", (event) => {
     return;
   }
   if (!menuOpen && (event.code === "KeyP" || event.code === "Escape")) {
-    paused = !paused;
-    say(paused ? "Tauko" : "Jatketaan!", 70);
+    togglePause();
     event.preventDefault();
     return;
   }
@@ -2579,6 +2615,10 @@ window.addEventListener("keyup", (event) => {
   if (event.code === "KeyF" || event.code === "ControlLeft" || event.code === "ControlRight") keys.shoot = false;
 });
 
+pauseBtn.addEventListener("click", () => {
+  startMusic();
+  togglePause();
+});
 restartBtn.addEventListener("click", () => {
   startMusic();
   resetGame();
@@ -2647,6 +2687,8 @@ setButtonControl("leftBtn", "left");
 setButtonControl("rightBtn", "right");
 setButtonControl("jumpBtn", "jump");
 setButtonControl("shootBtn", "shoot");
+window.addEventListener("blur", releaseAllControls);
+window.addEventListener("pointercancel", releaseAllControls);
 
 loadProgress();
 updateSoundButton();

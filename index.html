@@ -67,13 +67,20 @@
         <div class="level-progress" aria-label="Tason eteneminen">
           <span id="levelProgressFill"></span>
         </div>
-        <div class="controls">
-          <button id="leftBtn" type="button" aria-label="Liiku vasemmalle">◀</button>
-          <button id="jumpBtn" type="button" aria-label="Hyppää">▲</button>
-          <button id="rightBtn" type="button" aria-label="Liiku oikealle">▶</button>
-          <button id="shootBtn" type="button" aria-label="Ammu">●</button>
-          <button id="restartBtn" type="button">Uusi peli</button>
-          <button id="soundBtn" type="button">Ääni on</button>
+        <div class="controls" aria-label="Pelin ohjaimet">
+          <div class="move-controls" aria-label="Liikkuminen">
+            <button id="leftBtn" class="touch-control touch-control-move" type="button" aria-label="Liiku vasemmalle">◀</button>
+            <button id="rightBtn" class="touch-control touch-control-move" type="button" aria-label="Liiku oikealle">▶</button>
+          </div>
+          <div class="action-controls" aria-label="Toiminnot">
+            <button id="jumpBtn" class="touch-control touch-control-jump" type="button" aria-label="Hyppää">▲</button>
+            <button id="shootBtn" class="touch-control touch-control-shoot" type="button" aria-label="Ammu">●</button>
+          </div>
+          <div class="utility-controls" aria-label="Lisätoiminnot">
+            <button id="pauseBtn" type="button">Tauko</button>
+            <button id="restartBtn" type="button">Uusi peli</button>
+            <button id="soundBtn" type="button">Ääni on</button>
+          </div>
         </div>
         <div class="character-select" aria-label="Valitse kanihahmo">
           <span>Valitse kani</span>
