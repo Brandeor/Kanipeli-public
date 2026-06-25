@@ -760,3 +760,195 @@ select {
     grid-column: 1 / -1;
   }
 }
+
+@media (max-height: 560px) and (orientation: landscape) {
+  .shell {
+    min-height: 100svh;
+    place-items: start center;
+    padding: 6px 8px 8px;
+  }
+
+  .game-panel {
+    width: min(100%, calc((100svh - 118px) * 16 / 9));
+    max-width: 960px;
+    min-width: 0;
+  }
+
+  .hud {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 4px;
+    margin-bottom: 5px;
+  }
+
+  .hud .level-title {
+    grid-column: auto;
+    grid-template-columns: 1fr;
+    gap: 2px;
+  }
+
+  .hud div {
+    border-width: 3px;
+    box-shadow: 0 2px 0 #050508;
+    padding: 4px 5px;
+  }
+
+  .hud span {
+    font-size: clamp(0.5rem, 1.45vw, 0.62rem);
+  }
+
+  .hud strong,
+  .hud .level-title strong {
+    margin-top: 1px;
+    font-size: clamp(0.72rem, 2vw, 0.95rem);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  canvas {
+    max-height: calc(100svh - 132px);
+    border-width: 4px;
+    box-shadow: 0 5px 0 #050508;
+  }
+
+  .level-progress {
+    height: 12px;
+    margin-top: 5px;
+    border-width: 3px;
+    box-shadow: 0 2px 0 #050508;
+  }
+
+  .controls {
+    position: fixed;
+    left: max(8px, env(safe-area-inset-left));
+    right: max(8px, env(safe-area-inset-right));
+    bottom: max(7px, env(safe-area-inset-bottom));
+    z-index: 12;
+    grid-template-columns: minmax(150px, 1fr) minmax(168px, 220px) minmax(150px, 1fr);
+    grid-template-areas: "move utility action";
+    align-items: end;
+    gap: 10px;
+    width: auto;
+    max-width: none;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+    overflow: visible;
+    pointer-events: none;
+  }
+
+  .move-controls,
+  .action-controls,
+  .utility-controls {
+    pointer-events: auto;
+  }
+
+  .move-controls {
+    grid-area: move;
+    grid-template-columns: repeat(2, minmax(64px, 78px));
+    justify-content: start;
+    min-width: 0;
+  }
+
+  .action-controls {
+    grid-area: action;
+    grid-template-columns: repeat(2, minmax(64px, 78px));
+    justify-content: end;
+    min-width: 0;
+  }
+
+  .utility-controls {
+    grid-area: utility;
+    grid-template-columns: repeat(3, minmax(52px, 1fr));
+    align-self: center;
+    min-width: 0;
+  }
+
+  .touch-control {
+    width: 100%;
+    height: clamp(58px, 17svh, 76px);
+    font-size: clamp(1.25rem, 5svh, 1.8rem);
+    background: rgba(37, 34, 53, 0.94);
+  }
+
+  .touch-control-jump {
+    color: #17120a;
+    background: rgba(255, 207, 63, 0.96);
+  }
+
+  .touch-control-shoot {
+    background: rgba(232, 91, 82, 0.96);
+  }
+
+  #pauseBtn,
+  #restartBtn,
+  #soundBtn {
+    width: 100%;
+    height: 34px;
+    min-width: 0;
+    padding: 0 4px;
+    border-width: 3px;
+    font-size: clamp(0.56rem, 2.6svh, 0.74rem);
+    box-shadow: 0 2px 0 #050508;
+  }
+
+  .character-select,
+  .test-tools,
+  .editor-tools,
+  #editorOutput {
+    display: none;
+  }
+
+  .start-menu {
+    position: fixed;
+    inset: 6px 8px 8px;
+    grid-template-columns: minmax(220px, 0.9fr) minmax(280px, 1fr);
+    min-height: 0;
+    height: auto;
+  }
+
+  .menu-scene {
+    min-height: 0;
+  }
+
+  .menu-content {
+    align-content: center;
+    padding: 18px;
+    border-left-width: 5px;
+  }
+
+  .menu-content h1 {
+    font-size: clamp(2rem, 9svh, 3.2rem);
+  }
+
+  .menu-copy,
+  .menu-progress,
+  .menu-controls {
+    margin-top: 9px;
+  }
+
+  .menu-copy {
+    font-size: 0.82rem;
+    line-height: 1.28;
+  }
+
+  .menu-progress,
+  .menu-controls {
+    padding: 6px 8px;
+    font-size: 0.68rem;
+    line-height: 1.25;
+  }
+
+  .menu-actions {
+    grid-template-columns: minmax(120px, 1fr) minmax(140px, 1fr);
+    gap: 8px;
+    margin-top: 12px;
+  }
+
+  .menu-actions button {
+    height: 40px;
+    font-size: 0.78rem;
+  }
+}
