@@ -174,6 +174,18 @@ body {
   width: 22px;
   height: 56px;
   background: #d8d1bd;
+  transform-origin: 50% 100%;
+  animation: menu-ear-wiggle 2.4s steps(2, end) infinite;
+}
+
+.menu-rabbit .ear::before {
+  content: "";
+  position: absolute;
+  left: 5px;
+  top: 8px;
+  width: 7px;
+  height: 35px;
+  background: #f3b8c5;
 }
 
 .menu-rabbit .ear.left {
@@ -183,6 +195,7 @@ body {
 .menu-rabbit .ear.right {
   right: 12px;
   top: -8px;
+  animation-delay: 0.35s;
 }
 
 .menu-rabbit .head {
@@ -191,6 +204,28 @@ body {
   width: 56px;
   height: 44px;
   background: #d8d1bd;
+  animation: menu-rabbit-bob 1.6s steps(2, end) infinite;
+}
+
+.menu-rabbit .head::before {
+  content: "";
+  position: absolute;
+  left: 33px;
+  top: 15px;
+  width: 8px;
+  height: 8px;
+  background: var(--line);
+  box-shadow: 1px 1px 0 #f9f4dc;
+}
+
+.menu-rabbit .head::after {
+  content: "";
+  position: absolute;
+  left: 42px;
+  top: 25px;
+  width: 8px;
+  height: 5px;
+  background: #f3b8c5;
 }
 
 .menu-rabbit .body {
@@ -199,6 +234,28 @@ body {
   width: 72px;
   height: 48px;
   background: #d8d1bd;
+  animation: menu-rabbit-breathe 1.6s steps(2, end) infinite;
+}
+
+.menu-rabbit .body::before {
+  content: "";
+  position: absolute;
+  left: -12px;
+  top: 14px;
+  width: 18px;
+  height: 18px;
+  background: #f4efe0;
+  border: 5px solid var(--line);
+}
+
+.menu-rabbit .body::after {
+  content: "";
+  position: absolute;
+  left: 20px;
+  top: 13px;
+  width: 28px;
+  height: 24px;
+  background: #f4efe0;
 }
 
 .menu-rabbit-dark .ear,
@@ -207,14 +264,39 @@ body {
   background: #3c3548;
 }
 
-.menu-rabbit-dark .body::after {
-  content: "";
-  position: absolute;
-  left: 18px;
-  top: 12px;
-  width: 28px;
-  height: 22px;
+.menu-rabbit-dark .ear::before,
+.menu-rabbit-dark .head::before {
+  background: #c9d4d6;
+}
+
+.menu-rabbit-dark .head::after {
+  background: #ffcf3f;
+}
+
+.menu-rabbit-dark .body::before {
   background: #8fb6d9;
+}
+
+.menu-rabbit-dark .body::after {
+  background: #8fb6d9;
+}
+
+@keyframes menu-rabbit-bob {
+  50% {
+    transform: translateY(-3px);
+  }
+}
+
+@keyframes menu-rabbit-breathe {
+  50% {
+    transform: translateY(2px);
+  }
+}
+
+@keyframes menu-ear-wiggle {
+  50% {
+    transform: translateY(2px);
+  }
 }
 
 .menu-content {

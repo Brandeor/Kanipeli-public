@@ -1,5 +1,8 @@
 import { music } from "./engine/audio/music-data.js";
+import { sideScrollerCameraTargetX, smoothCameraX, snapCameraX } from "./engine/core/camera.js";
+import { clamp, rectsOverlap } from "./engine/core/geometry.js";
 import { saveKeys } from "./engine/core/save-keys.js";
+import { readSave, writeSave } from "./engine/core/storage.js";
 import { editorPresets } from "./engine/editor/editor-presets.js";
 import { levels } from "./games/kaninkapina/content/levels.js";
 import { rabbitStyles } from "./games/kaninkapina/content/rabbits.js";
@@ -85,6 +88,8 @@ const PENDULUM_DEFAULT_LENGTH = 112;
 const PENDULUM_DEFAULT_RADIUS = 18;
 const PENDULUM_DEFAULT_SWING = 0.82;
 const PENDULUM_DEFAULT_SPEED = 0.025;
+const TARGET_FRAME_MS = 1000 / 60;
+const MAX_LOGIC_STEPS = 4;
 
 const keys = {
   left: false,
@@ -129,6 +134,8 @@ let highestUnlockedLevel = 0;
 let soundOn = true;
 let carrotComboTimer = 0;
 let carrotComboCount = 0;
+let lastLoopTick = 0;
+let logicAccumulator = 0;
 
 
 
@@ -732,10 +739,6 @@ function updateLevelProgress() {
   levelProgressFill.style.width = `${progress}%`;
 }
 
-function rectsOverlap(a, b) {
-  return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
-}
-
 function enemyBox(enemy) {
   if (enemy.type === "seagull") {
     return { x: enemy.x, y: enemy.y, w: 48, h: 30 };
@@ -776,10 +779,6 @@ function hasActivePressureButton(channel = "A") {
   return (level.pressureButtons || []).some((button) => button.active && gateChannel(button) === channel);
 }
 
-function clamp(value, min, max) {
-  return Math.max(min, Math.min(max, value));
-}
-
 function say(text, timer = 95) {
   message = text;
   messageTimer = timer;
@@ -818,23 +817,6 @@ function drawScorePopups() {
     ctx.fillText(popup.text, x + 2, y + 2);
     ctx.fillStyle = popup.color;
     ctx.fillText(popup.text, x, y);
-  }
-}
-
-function readSave(key, fallback) {
-  try {
-    const value = window.localStorage.getItem(key);
-    return value === null ? fallback : value;
-  } catch (error) {
-    return fallback;
-  }
-}
-
-function writeSave(key, value) {
-  try {
-    window.localStorage.setItem(key, String(value));
-  } catch (error) {
-    // Saving is optional; gameplay should continue if browser storage is blocked.
   }
 }
 
@@ -1711,17 +1693,21 @@ function cameraTargetX() {
       break;
     }
   }
-  return clamp(player.x + lookAhead + hintLookX - canvas.width * 0.42, 0, level.width - canvas.width);
+  return sideScrollerCameraTargetX({
+    subject: player,
+    levelWidth: level.width,
+    viewportWidth: canvas.width,
+    lookAhead,
+    hintLookX,
+  });
 }
 
 function snapCameraToPlayer() {
-  cameraX = Math.round(cameraTargetX());
+  cameraX = snapCameraX(cameraTargetX());
 }
 
 function updateCamera() {
-  const targetX = cameraTargetX();
-  const nextX = cameraX + (targetX - cameraX) * CAMERA_SMOOTHING;
-  cameraX = Math.round(Math.abs(targetX - nextX) < 0.5 ? targetX : nextX);
+  cameraX = smoothCameraX(cameraX, cameraTargetX(), CAMERA_SMOOTHING);
 }
 
 function drawPixelRect(x, y, w, h, color) {
@@ -2338,40 +2324,62 @@ function drawPlayer(tick) {
   const x = Math.round(player.x - cameraX);
   const y = Math.round(player.y);
   const isRunning = player.grounded && Math.abs(player.vx) > 0.1;
-  const hop = isRunning ? Math.round(Math.sin(tick / 8) * 1) : 0;
+  const runStep = isRunning ? Math.floor(tick / 7) % 4 : 0;
+  const hop = isRunning ? (runStep === 1 || runStep === 2 ? -2 : 0) : player.grounded ? Math.round(Math.sin(tick / 28) * 1) : 0;
+  const stretch = !player.grounded ? Math.max(-2, Math.min(3, Math.round(player.vy / 4))) : 0;
+  const earWave = isRunning ? (runStep % 2 === 0 ? -2 : 2) : Math.round(Math.sin(tick / 18) * 1);
+  const blink = Math.floor(tick / 170) % 12 === 0;
   const faceRight = player.facing > 0;
+  const eyeX = faceRight ? x + 24 : x + 9;
+  const noseX = faceRight ? x + 29 : x + 4;
+  const cheekX = faceRight ? x + 22 : x + 13;
+  const tailX = faceRight ? x + 1 : x + 27;
+  const backFootX = faceRight ? x + 3 : x + 22;
+  const frontFootX = faceRight ? x + 22 : x + 3;
+  const backFootY = y + 38 + hop + (isRunning && runStep === 1 ? 2 : 0);
+  const frontFootY = y + 38 + hop + (isRunning && runStep === 3 ? 2 : 0);
 
   if (player.deathTimer > 0) {
     const flip = Math.floor(player.deathTimer / 8) % 2 === 0;
     const lift = Math.max(0, PLAYER_DEATH_TIME - player.deathTimer) < 20 ? -4 : 0;
-    drawPixelRect(x + 3, y + 20 + lift, 32, 24, "#111018");
-    drawPixelRect(x + 7, y + 24 + lift, 24, 15, rabbit.body);
-    drawPixelRect(x + 11, y + 28 + lift, 10, 8, rabbit.belly);
-    drawPixelRect(x + (flip ? 2 : 27), y + 13 + lift, 20, 8, "#111018");
-    drawPixelRect(x + (flip ? 5 : 29), y + 15 + lift, 14, 5, rabbit.innerEar);
-    drawPixelRect(x + (flip ? 24 : 7), y + 27 + lift, 5, 5, "#111018");
-    drawPixelRect(x + 30, y + 39 + lift, 10, 5, "#111018");
-    drawPixelRect(x - 3, y + 39 + lift, 10, 5, "#111018");
+    drawPixelRect(x + 5, y + 22 + lift, 30, 22, "#111018");
+    drawPixelRect(x + 9, y + 25 + lift, 22, 15, rabbit.body);
+    drawPixelRect(x + 12, y + 29 + lift, 12, 8, rabbit.belly);
+    drawPixelRect(x + (flip ? 2 : 25), y + 13 + lift, 22, 8, "#111018");
+    drawPixelRect(x + (flip ? 6 : 28), y + 15 + lift, 14, 5, rabbit.innerEar);
+    drawPixelRect(x + (flip ? 25 : 8), y + 28 + lift, 5, 3, "#111018");
+    drawPixelRect(x + (flip ? 24 : 9), y + 34 + lift, 4, 3, rabbit.nose);
+    drawPixelRect(x + 29, y + 39 + lift, 10, 5, "#111018");
+    drawPixelRect(x - 2, y + 39 + lift, 10, 5, "#111018");
     return;
   }
 
-  drawPixelRect(x + 4, y + 8 + hop, 26, 34, "#111018");
-  drawPixelRect(x + 8, y + 12 + hop, 22, 26, rabbit.body);
-  drawPixelRect(x + 12, y + 23 + hop, 12, 12, rabbit.belly);
-  drawPixelRect(x + 7, y - 7 + hop, 8, 20, "#111018");
-  drawPixelRect(x + 19, y - 9 + hop, 8, 22, "#111018");
-  drawPixelRect(x + 9, y - 4 + hop, 5, 15, rabbit.innerEar);
-  drawPixelRect(x + 21, y - 5 + hop, 5, 16, rabbit.innerEar);
-  drawPixelRect(x + (faceRight ? 23 : 9), y + 18 + hop, 5, 5, "#111018");
-  drawPixelRect(x + (faceRight ? 24 : 10), y + 19 + hop, 2, 2, "#f9f4dc");
-  drawPixelRect(x + (faceRight ? 30 : 3), y + 25 + hop, 6, 4, rabbit.nose);
-  drawPixelRect(x + 2, y + 38 + hop, 11, 6, "#111018");
-  drawPixelRect(x + 22, y + 38 + hop, 11, 6, "#111018");
+  if (player.grounded) {
+    drawPixelRect(x + 5, y + 43, 24, 4, "rgba(13, 12, 18, 0.3)");
+  }
+
+  drawPixelRect(x + 8, y - 8 + hop + earWave, 8, 22, "#111018");
+  drawPixelRect(x + 20, y - 10 + hop - earWave, 8, 24, "#111018");
+  drawPixelRect(x + 10, y - 5 + hop + earWave, 4, 15, rabbit.innerEar);
+  drawPixelRect(x + 22, y - 6 + hop - earWave, 4, 16, rabbit.innerEar);
+  drawPixelRect(x + 5, y + 8 + hop - stretch, 28, 34 + stretch, "#111018");
+  drawPixelRect(x + 8, y + 11 + hop - stretch, 22, 27 + stretch, rabbit.body);
+  drawPixelRect(x + 7, y + 14 + hop - stretch, 18, 13, rabbit.body);
+  drawPixelRect(x + 12, y + 24 + hop, 12, 12 + Math.max(0, stretch), rabbit.belly);
+  drawPixelRect(tailX, y + 25 + hop, 7, 8, "#111018");
+  drawPixelRect(tailX + 2, y + 27 + hop, 4, 4, rabbit.belly);
+  drawPixelRect(eyeX, y + 18 + hop - stretch, 6, blink ? 2 : 6, "#111018");
+  if (!blink) drawPixelRect(eyeX + 1, y + 19 + hop - stretch, 2, 2, "#f9f4dc");
+  drawPixelRect(noseX, y + 25 + hop - stretch, 5, 4, rabbit.nose);
+  drawPixelRect(cheekX, y + 28 + hop - stretch, 5, 3, rabbit.innerEar);
+  drawPixelRect(backFootX, backFootY, 11, 6, "#111018");
+  drawPixelRect(frontFootX, frontFootY, 11, 6, "#111018");
 
   if (player.turboTimer > 0 && Math.abs(player.vx) > 0.1) {
     const trailX = faceRight ? x - 16 : x + 36;
-    drawPixelRect(trailX, y + 23 + hop, 12, 5, "#ffcf3f");
-    drawPixelRect(trailX + (faceRight ? -7 : 12), y + 29 + hop, 10, 4, "#e85b52");
+    drawPixelRect(trailX, y + 22 + hop, 13, 5, "#ffcf3f");
+    drawPixelRect(trailX + (faceRight ? -7 : 12), y + 28 + hop, 10, 4, "#e85b52");
+    drawPixelRect(trailX + (faceRight ? 4 : -2), y + 34 + hop, 7, 3, "#f9f4dc");
   }
 }
 
@@ -2519,23 +2527,40 @@ function draw(tick) {
   drawPauseOverlay();
 }
 
+function updateGameLogic() {
+  gameFrame += 1;
+  updateMovingPlatforms();
+  updateCrumblePlatforms();
+  updatePlayer();
+  updateEnemies();
+  updateBoss();
+  updateBossAttacks();
+  updateShots();
+  updateItems();
+  updateScorePopups();
+  updateCamera();
+  updateLevelProgress();
+  if (messageTimer !== Infinity && messageTimer > 0) messageTimer -= 1;
+}
+
 function loop(tick) {
-  if (!paused) {
-    gameFrame += 1;
-    updateMovingPlatforms();
-    updateCrumblePlatforms();
-    updatePlayer();
-    updateEnemies();
-    updateBoss();
-    updateBossAttacks();
-    updateShots();
-    updateItems();
-    updateScorePopups();
-    updateCamera();
-    updateLevelProgress();
+  if (paused) {
+    lastLoopTick = tick;
+    logicAccumulator = 0;
+  } else {
+    const delta = lastLoopTick === 0 ? TARGET_FRAME_MS : Math.min(1000, tick - lastLoopTick);
+    lastLoopTick = tick;
+    logicAccumulator += delta;
+
+    let steps = 0;
+    while (logicAccumulator >= TARGET_FRAME_MS && steps < MAX_LOGIC_STEPS) {
+      updateGameLogic();
+      logicAccumulator -= TARGET_FRAME_MS;
+      steps += 1;
+    }
+    if (steps === MAX_LOGIC_STEPS) logicAccumulator = 0;
   }
   draw(tick);
-  if (!paused && messageTimer !== Infinity && messageTimer > 0) messageTimer -= 1;
   requestAnimationFrame(loop);
 }
 
