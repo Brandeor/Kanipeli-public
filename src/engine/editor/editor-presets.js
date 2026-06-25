@@ -18,6 +18,7 @@ export const editorPresets = {
   cameraHint: { w: 320, h: 160 },
   carrot: { w: 22, h: 30 },
   bonusCarrot: { w: 28, h: 34 },
+  starCarrot: { w: 30, h: 30 },
   hedgehog: { w: 42, h: 34 },
   seagull: { w: 48, h: 30 },
   checkpoint: { w: 56, h: 48 },

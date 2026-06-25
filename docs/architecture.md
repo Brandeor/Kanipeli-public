@@ -21,7 +21,7 @@ content-packs/
 
 ## Layers
 
-`src/engine/` contains reusable systems that should not know about rabbits, carrots, or Kaninkapina-specific rules. Current first splits include music data, save keys, storage helpers, geometry helpers, side-scroller camera helpers, and editor presets. Future candidates are input, renderer, audio playback, and the level editor shell.
+`src/engine/` contains reusable systems that should not know about rabbits, carrots, or Kaninkapina-specific rules. Current first splits include music data, audio playback, save keys, storage helpers, geometry helpers, side-scroller camera helpers, and editor presets. Future candidates are input, renderer, and the level editor shell.
 
 `src/games/kaninkapina/` contains the Kaninkapina implementation: game rules, player behavior, enemies, bosses, pickups, hazards, UI copy, balance values, levels, rabbit styles, and assets.
 
@@ -37,5 +37,5 @@ Keep this as one repository for now. Split the engine into a separate repository
 
 1. Continue moving small reusable core helpers into `src/engine/core/` as they become independent of Kaninkapina state.
 2. Move drawing primitives and environment rendering into `src/engine/render/`.
-3. Move audio playback functions into `src/engine/audio/`.
-4. Move Kaninkapina-specific systems into files such as `player.js`, `enemies.js`, `boss.js`, `pickups.js`, and `hazards.js`.
+3. Move Kaninkapina-specific systems into files such as `player.js`, `enemies.js`, `boss.js`, `pickups.js`, and `hazards.js`.
+4. Split the level editor into a reusable editor shell and Kaninkapina-specific editor tools.

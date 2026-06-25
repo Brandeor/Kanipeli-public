@@ -1,3 +1,4 @@
+import { createAudioPlayer } from "./engine/audio/audio-player.js";
 import { music } from "./engine/audio/music-data.js";
 import { sideScrollerCameraTargetX, smoothCameraX, snapCameraX } from "./engine/core/camera.js";
 import { clamp, rectsOverlap } from "./engine/core/geometry.js";
@@ -98,14 +99,6 @@ const keys = {
   shoot: false,
 };
 
-let audioCtx = null;
-let musicTimer = null;
-let musicStep = 0;
-let currentMusicMode = "";
-let musicEnabled = false;
-
-
-
 let player;
 let level = levels[0];
 let currentLevelIndex = 0;
@@ -136,6 +129,7 @@ let carrotComboTimer = 0;
 let carrotComboCount = 0;
 let lastLoopTick = 0;
 let logicAccumulator = 0;
+const audio = createAudioPlayer(music);
 
 
 
@@ -182,6 +176,9 @@ function resetLevelState() {
     carrot.got = false;
   });
   (level.bonusCarrots || []).forEach((carrot) => {
+    carrot.got = false;
+  });
+  (level.starCarrots || []).forEach((carrot) => {
     carrot.got = false;
   });
   (level.keys || []).forEach((key) => {
@@ -381,6 +378,7 @@ function editorCollections() {
     cameraHints: level.cameraHints || (level.cameraHints = []),
     carrots: level.carrots,
     bonusCarrots: level.bonusCarrots || (level.bonusCarrots = []),
+    starCarrots: level.starCarrots || (level.starCarrots = []),
     enemies: level.enemies,
     checkpoints: level.checkpoints || (level.checkpoints = []),
   };
@@ -453,6 +451,7 @@ function editorCollectionNameForType(type) {
     cameraHint: "cameraHints",
     carrot: "carrots",
     bonusCarrot: "bonusCarrots",
+    starCarrot: "starCarrots",
     hedgehog: "enemies",
     seagull: "enemies",
     checkpoint: "checkpoints",
@@ -619,6 +618,8 @@ function addEditorObject(worldX, worldY) {
     editorAdd("carrots", { x, y, got: false });
   } else if (type === "bonusCarrot") {
     editorAdd("bonusCarrots", { x, y, got: false });
+  } else if (type === "starCarrot") {
+    editorAdd("starCarrots", { x, y, got: false });
   } else if (type === "hedgehog") {
     editorAdd("enemies", { type: "hedgehog", x, y, min: x - 120, max: x + 120, dir: 1, speed: 1.6 });
   } else if (type === "seagull") {
@@ -826,6 +827,7 @@ function loadProgress() {
   selectedRabbit = readSave(saveKeys.rabbit, selectedRabbit);
   if (!rabbitStyles[selectedRabbit]) selectedRabbit = "classic";
   soundOn = readSave(saveKeys.soundOn, "true") !== "false";
+  audio.setSoundOn(soundOn);
 }
 
 function unlockLevel(index) {
@@ -860,124 +862,28 @@ function updateSoundButton() {
   soundBtn.classList.toggle("is-muted", !soundOn);
 }
 
-function stopMusicTimer() {
-  if (musicTimer) {
-    window.clearTimeout(musicTimer);
-    musicTimer = null;
-  }
-}
-
 function toggleSound() {
   soundOn = !soundOn;
   writeSave(saveKeys.soundOn, soundOn);
+  audio.setSoundOn(soundOn);
   updateSoundButton();
-  if (!soundOn) {
-    stopMusicTimer();
-    musicEnabled = false;
-    return;
-  }
-  startMusic();
-}
-
-function playTone(freq, start, duration, type, gainValue) {
-  if (!soundOn || !audioCtx || !musicEnabled) return;
-  const oscillator = audioCtx.createOscillator();
-  const gain = audioCtx.createGain();
-  oscillator.type = type;
-  oscillator.frequency.setValueAtTime(freq, start);
-  gain.gain.setValueAtTime(0.0001, start);
-  gain.gain.linearRampToValueAtTime(gainValue, start + 0.01);
-  gain.gain.setValueAtTime(gainValue, start + duration * 0.72);
-  gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
-  oscillator.connect(gain);
-  gain.connect(audioCtx.destination);
-  oscillator.start(start);
-  oscillator.stop(start + duration + 0.02);
+  if (soundOn) startMusic();
 }
 
 function playSfx(name) {
-  if (!soundOn || !audioCtx || !musicEnabled) return;
-  const now = audioCtx.currentTime;
-  const tone = (freq, offset, duration, type = "square", gain = 0.08) => {
-    playTone(freq, now + offset, duration, type, gain);
-  };
-
-  if (name === "jump") {
-    tone(392, 0, 0.05, "square", 0.055);
-    tone(587.33, 0.045, 0.08, "square", 0.045);
-  } else if (name === "carrot") {
-    tone(659.25, 0, 0.045, "square", 0.05);
-    tone(880, 0.045, 0.06, "square", 0.045);
-  } else if (name === "gold") {
-    tone(880, 0, 0.05, "square", 0.055);
-    tone(1174.66, 0.055, 0.06, "square", 0.05);
-    tone(1567.98, 0.12, 0.09, "square", 0.045);
-  } else if (name === "turbo") {
-    tone(220, 0, 0.04, "sawtooth", 0.045);
-    tone(440, 0.045, 0.05, "sawtooth", 0.045);
-    tone(880, 0.1, 0.12, "sawtooth", 0.04);
-  } else if (name === "shotgun") {
-    tone(92.5, 0, 0.07, "sawtooth", 0.12);
-    tone(138.59, 0.025, 0.06, "square", 0.09);
-  } else if (name === "hit") {
-    tone(196, 0, 0.045, "square", 0.075);
-    tone(146.83, 0.045, 0.07, "square", 0.06);
-  } else if (name === "hurt") {
-    tone(220, 0, 0.08, "sawtooth", 0.08);
-    tone(164.81, 0.075, 0.11, "sawtooth", 0.065);
-  } else if (name === "click") {
-    tone(587.33, 0, 0.035, "square", 0.045);
-    tone(293.66, 0.035, 0.035, "square", 0.035);
-  } else if (name === "bossAttack") {
-    tone(311.13, 0, 0.06, "square", 0.055);
-    tone(233.08, 0.06, 0.08, "square", 0.05);
-  } else if (name === "win") {
-    tone(523.25, 0, 0.08, "square", 0.05);
-    tone(659.25, 0.08, 0.08, "square", 0.05);
-    tone(783.99, 0.16, 0.12, "square", 0.045);
-    tone(1046.5, 0.3, 0.18, "square", 0.04);
-  }
-}
-
-function scheduleMusicStep() {
-  if (!soundOn || !audioCtx || !musicEnabled) return;
-  const mode = level.boss ? "boss" : "level";
-  const theme = music[mode];
-  const stepDuration = 60 / theme.bpm / 2;
-  const now = audioCtx.currentTime;
-  const lead = theme.lead[musicStep % theme.lead.length];
-  const bass = theme.bass[Math.floor(musicStep / 2) % theme.bass.length];
-
-  playTone(bass, now, stepDuration * 0.78, "square", mode === "boss" ? 0.055 : 0.045);
-  if (musicStep % 2 === 0 || mode === "boss") {
-    playTone(lead, now + 0.015, stepDuration * 0.62, "square", mode === "boss" ? 0.045 : 0.035);
-  }
-  if (mode === "boss" && musicStep % 4 === 2) {
-    playTone(lead * 1.5, now + stepDuration * 0.45, stepDuration * 0.28, "square", 0.025);
-  }
-
-  musicStep += 1;
-  musicTimer = window.setTimeout(scheduleMusicStep, stepDuration * 1000);
+  audio.playSfx(name);
 }
 
 function setMusicMode() {
-  if (!soundOn || !musicEnabled) return;
-  const mode = level.boss ? "boss" : "level";
-  if (mode === currentMusicMode) return;
-  currentMusicMode = mode;
-  musicStep = 0;
-  if (musicTimer) window.clearTimeout(musicTimer);
-  scheduleMusicStep();
+  audio.setMusicMode(musicMode());
 }
 
 function startMusic() {
-  if (!soundOn) return;
-  if (musicEnabled) return;
-  audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
-  audioCtx.resume();
-  musicEnabled = true;
-  currentMusicMode = "";
-  setMusicMode();
+  audio.start(musicMode());
+}
+
+function musicMode() {
+  return level.boss ? "boss" : "level";
 }
 
 function fireShotgun() {
@@ -1412,6 +1318,21 @@ function updateItems() {
       spawnScorePopup("+750", carrot.x + 14, carrot.y, "#f9f4dc");
       playSfx("gold");
       say("Kani: Kultaporkkana. Verottaja ei saa tietää.", 140);
+      updateHud();
+    }
+  }
+
+  for (const carrot of level.starCarrots || []) {
+    if (carrot.got) continue;
+    const box = { x: carrot.x, y: carrot.y, w: 30, h: 30 };
+    if (rectsOverlap(player, box)) {
+      carrot.got = true;
+      score += 1200;
+      carrotComboCount = Math.max(carrotComboCount, 2);
+      carrotComboTimer = CARROT_COMBO_TIME * 2;
+      spawnScorePopup("+1200 STAR", carrot.x + 15, carrot.y, "#f9f4dc");
+      playSfx("gold");
+      say("TÃ¤htiporkkana! Kani valitsi vaikean reitin.", 125);
       updateHud();
     }
   }
@@ -2101,6 +2022,20 @@ function drawBonusCarrot(carrot, tick) {
   drawPixelRect(x + 14, y + 23, 7, 5, "#ffcf3f");
 }
 
+function drawStarCarrot(carrot, tick) {
+  if (carrot.got) return;
+  const bob = Math.round(Math.sin(tick / 150 + carrot.x) * 5);
+  const x = Math.round(carrot.x) - cameraX;
+  const y = Math.round(carrot.y) + bob;
+  drawPixelRect(x + 5, y + 5, 24, 24, "#111018");
+  drawPixelRect(x + 15, y - 2, 4, 34, "#111018");
+  drawPixelRect(x - 1, y + 15, 36, 4, "#111018");
+  drawPixelRect(x + 13, y, 8, 30, "#ffcf3f");
+  drawPixelRect(x + 2, y + 13, 30, 8, "#ffcf3f");
+  drawPixelRect(x + 8, y + 8, 18, 18, "#f9f4dc");
+  drawPixelRect(x + 13, y + 13, 8, 8, "#f28d35");
+}
+
 function drawKey(key, tick) {
   if (key.got) return;
   const bob = Math.round(Math.sin(tick / 190 + key.x) * 4);
@@ -2510,6 +2445,7 @@ function draw(tick) {
   (level.checkpoints || []).forEach((checkpoint) => drawCheckpoint(checkpoint, tick));
   level.carrots.forEach((carrot) => drawCarrot(carrot, tick));
   (level.bonusCarrots || []).forEach((carrot) => drawBonusCarrot(carrot, tick));
+  (level.starCarrots || []).forEach((carrot) => drawStarCarrot(carrot, tick));
   drawWeapon();
   drawTurbo();
   level.enemies.forEach((enemy) => drawEnemy(enemy, tick));
